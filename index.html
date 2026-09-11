@@ -21,8 +21,26 @@ aside.note-panel{display:none}
 .shell.notes-view .reader{display:none}
 .shell.notes-view aside.note-panel{display:block;position:static;height:auto;max-width:900px;margin:0 auto}
 @media(max-width:1000px){.shell{display:block;padding:0 14px 70px}}
+</style><style id="gloss-bar-style">
+.gloss-bar{max-width:1560px;margin:10px auto 0;padding:10px 16px 8px;background:#fffef9;border:1px solid #e2e4da;border-radius:12px;position:sticky;z-index:4}
+.gloss-bar-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.gloss-bar-head strong{font-size:14px}
+.gloss-bar-hint{font-size:12px;color:#8a938a}
+.gloss-bar-head button{margin-left:auto;font-size:12px;padding:4px 10px}
+#glossBarBody{max-height:104px;overflow:auto;padding-right:4px}
+.gloss-bar.collapsed #glossBarBody{display:none}
+.gloss-bar.collapsed{position:static}
+#glossView{display:none}
+@media(max-width:1000px){
+  .gloss-bar{margin:8px 10px 0;border-radius:10px;padding:8px 12px}
+  #glossBarBody{max-height:96px}
+}
 </style></head><body data-cols="2">
 <header class="top"><div class="brand">小故事 · 进阶阅读与笔记 <small>2026-09-11 · 5篇 / 70词</small></div><div class="controls"><button id="prev" aria-label="上一篇">←</button><select id="story" aria-label="选择故事"></select><button id="next" aria-label="下一篇">→</button><label>词表 <select id="columns" aria-label="每行词表组数"><option value="2">2组</option><option value="3">3组 · 紧凑</option></select></label><span class="reading-clock" title="仅当前故事阅读页处于前台时累计，切换后自动保存"><span>本篇阅读</span> <time id="readingTime">00:00</time> <small id="readingClockState">计时中</small> <button id="readingPause" type="button">暂停</button></span></div><nav class="tabs"><button data-tab="read" class="active">阅读</button><button data-tab="gloss">词表与词组</button><button data-tab="notes" id="notesTab">笔记 · 0</button></nav></header>
+<section class="gloss-bar" id="glossBar" aria-label="词表与词组">
+<div class="gloss-bar-head"><strong>词表与词组</strong><span class="gloss-bar-hint">栏内可滚动</span><button id="glossToggle" type="button">收起</button></div>
+<div id="glossBarBody"></div>
+</section>
 <main class="shell" id="shell"><section class="reader card"><h1 id="title"></h1><div class="sub" id="subtitle"></div><div id="readView"><p class="hint">实时查词版 v3 · 单击任意英文词加入生词篮，点一下显示中文（2 秒），双击撤回；划选短语后点底部「加入选中短语」。黄色是目标词，绿色是你收集的词。</p><div id="passage" class="english"></div><details><summary>查看中文大意</summary><p class="summary" id="summary"></p></details></div><div id="glossView" class="hidden"><p class="legend">按正文首次出现顺序排列。词性按文中用法：n. 名词 · v. 动词 · adj. 形容词 · adv. 副词 · prep. 介词 · n. phr. 名词短语。点击词表中的词也可收集。</p><div class="gloss-grid" id="gloss"></div><h2>故事中的词组</h2><div id="phrases"></div></div><section id="personalNotes" style="margin-top:28px"></section><details style="margin-top:24px"><summary>本批词表来源</summary><p class="hint">本批 5 篇故事取自 2026-09-11 今日队列的前 100 词：其中 30 个词已在此前故事中整理过，故跳过，只保留 70 个新词；另有 284 词属逾期积压，本批未纳入。全部故事为原创虚构。</p></details></section>
 <aside class="note-panel card"><h2>我的阅读笔记</h2><label for="storynote">本篇随手记</label><textarea id="storynote" placeholder="哪句话没看懂？写下你的理解或疑问……"></textarea><div class="actions"><button class="primary" id="copy">复制给助手</button><button id="download">导出笔记</button></div><p class="hint">复制后粘贴到聊天框发送。备注保存在本机当前浏览器；重要笔记可导出备份。</p><div id="entries"></div><div id="manual" class="hidden"><label for="copybox">请手动复制下面的整理内容</label><textarea id="copybox" readonly></textarea></div></aside></main>
 <div id="meaningToast" class="hidden" role="status" aria-live="polite" onclick="this.classList.add('hidden')"></div><footer class="bottom"><span id="status" role="status">点词开始记笔记</span><button id="addSelection" disabled>加入选中短语</button><button id="basket">生词篮 0</button></footer>
@@ -246,5 +264,37 @@ async function prefetchStep(){
  if(prefetchStory===current().id&&prefetchQueue.length)prefetchTimer=setTimeout(prefetchStep,1200);
 }
 const origDraw=draw;draw=function(){origDraw.apply(this,arguments);prefetchPassage();};
+/* 词表与词组：顶部小栏 */
+const glossBarKey='story-reader-glossbar-v1';
+function moveGlossIntoBar(){
+  const body=document.getElementById('glossBarBody');
+  const gloss=document.getElementById('gloss');
+  const phrases=document.getElementById('phrases');
+  const legend=document.querySelector('#glossView .legend');
+  const heading=document.querySelector('#glossView h2');
+  if(!body||!gloss)return;
+  if(legend)body.appendChild(legend);
+  body.appendChild(gloss);
+  if(heading)body.appendChild(heading);
+  if(phrases)body.appendChild(phrases);
+}
+function glossBarCollapsed(){return document.getElementById('glossBar').classList.contains('collapsed');}
+function setGlossBar(collapsed){
+  document.getElementById('glossBar').classList.toggle('collapsed',collapsed);
+  document.getElementById('glossToggle').textContent=collapsed?'展开':'收起';
+  try{localStorage.setItem(glossBarKey,collapsed?'1':'0');}catch(error){}
+}
+function anchorGlossBar(){
+  const top=document.querySelector('.top');
+  const bar=document.getElementById('glossBar');
+  if(top&&bar)bar.style.top=(top.offsetHeight+6)+'px';
+}
+moveGlossIntoBar();
+document.getElementById('glossToggle').onclick=()=>setGlossBar(!glossBarCollapsed());
+const glossTabBtn=document.querySelector('[data-tab="gloss"]');
+if(glossTabBtn)glossTabBtn.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();setGlossBar(!glossBarCollapsed());},true);
+let glossSaved=null;try{glossSaved=localStorage.getItem(glossBarKey);}catch(error){}
+setGlossBar(glossSaved==='1');
+anchorGlossBar();setInterval(anchorGlossBar,1500);window.addEventListener('resize',anchorGlossBar);
 draw();initializeReadingClock();pullState();
 </script></body></html>
