@@ -35,11 +35,22 @@ aside.note-panel{display:none}
   .gloss-bar{margin:8px 10px 0;border-radius:10px;padding:8px 12px}
   #glossBarBody{max-height:96px}
 }
+</style><style id="collected-style">
+.gloss-bar-head .head-actions{margin-left:auto;display:flex;gap:8px}
+.gloss-bar-head .head-actions button{margin-left:0}
+#markDone.done{background:#cde7d2;border-color:#9dc4a6}
+#collectedWords{margin-bottom:6px}
+.cw-title{font-size:12px;color:#6b7a6c;margin:2px 0 4px}
+.cw-chip{display:inline-flex;align-items:baseline;gap:6px;margin:0 8px 6px 0;padding:3px 8px;border:1px solid #cde7d2;background:#f2f9f3;border-radius:12px;font-size:13px}
+.cw-chip b{font:700 15px "Times New Roman",serif}
+.cw-chip i{font-style:normal;color:#5c6b5e;font-size:12px}
+.cw-chip button{border:0;background:none;color:#8a938a;padding:0 2px;font-size:14px;line-height:1}
+.cw-chip button:hover{color:#b4453c}
 </style></head><body data-cols="2">
 <header class="top"><div class="brand">小故事 · 进阶阅读与笔记 <small>3 天 · 24 篇故事</small></div><div class="controls"><button id="prev" aria-label="上一篇">←</button><select id="story" aria-label="选择故事"></select><button id="next" aria-label="下一篇">→</button><select id="columns" style="display:none" aria-hidden="true"><option value="2">2组</option></select><span class="reading-clock" title="仅当前故事阅读页处于前台时累计，切换后自动保存"><time id="readingTime">00:00</time> <small id="readingClockState">计时中</small> <button id="readingPause" type="button">暂停</button></span></div><nav class="tabs"><button data-tab="read" class="active">阅读</button><button data-tab="gloss">词表与词组</button></nav></header>
 <section class="gloss-bar" id="glossBar" aria-label="词表与词组">
-<div class="gloss-bar-head"><strong>词表与词组</strong><span class="gloss-bar-hint">栏内可滚动</span><button id="glossToggle" type="button">收起</button></div>
-<div id="glossBarBody"></div>
+<div class="gloss-bar-head"><strong>词表与词组</strong><span class="gloss-bar-hint">栏内可滚动</span><span class="head-actions"><button id="markDone" type="button">本篇学完了</button><button id="glossToggle" type="button">收起</button></span></div>
+<div id="glossBarBody"><div id="collectedWords"></div></div>
 </section>
 <main class="shell" id="shell"><section class="reader card"><h1 id="title"></h1><div class="sub" id="subtitle"></div><div id="readView"><p class="hint">实时查词版 v3 · 单击任意英文词加入生词篮，点一下显示中文（2 秒），双击撤回；划选短语后点底部「加入选中短语」。黄色是目标词，绿色是你收集的词。</p><div id="passage" class="english"></div><details><summary>查看中文大意</summary><p class="summary" id="summary"></p></details></div><div id="glossView" class="hidden"><p class="legend">按正文首次出现顺序排列。词性按文中用法：n. 名词 · v. 动词 · adj. 形容词 · adv. 副词 · prep. 介词 · n. phr. 名词短语。点击词表中的词也可收集。</p><div class="gloss-grid" id="gloss"></div><h2>故事中的词组</h2><div id="phrases"></div></div><section id="personalNotes" style="margin-top:28px"></section><details style="margin-top:24px"><summary>本批词表来源</summary><p class="hint">本批 5 篇故事取自 2026-09-11 今日队列的前 100 词：其中 30 个词已在此前故事中整理过，故跳过，只保留 70 个新词；另有 284 词属逾期积压，本批未纳入。全部故事为原创虚构。</p></details></section>
 <aside class="note-panel card"><h2>我的阅读笔记</h2><label for="storynote">本篇随手记</label><textarea id="storynote" placeholder="哪句话没看懂？写下你的理解或疑问……"></textarea><div class="actions"><button class="primary" id="copy">复制给助手</button><button id="download">导出笔记</button></div><p class="hint">复制后粘贴到聊天框发送。备注保存在本机当前浏览器；重要笔记可导出备份。</p><div id="entries"></div><div id="manual" class="hidden"><label for="copybox">请手动复制下面的整理内容</label><textarea id="copybox" readonly></textarea></div></aside></main>
@@ -312,5 +323,40 @@ anchorGlossBar();setInterval(anchorGlossBar,1500);window.addEventListener('resiz
  }
  if(changed){save();draw();status('已找回之前的生词标记（'+state.entries.length+' 项）');}
 })();
+/* collected words in the strip + mark-as-done */
+function renderCollected(){
+  const box=document.getElementById('collectedWords');
+  if(!box)return;
+  const picked=state.entries.filter(e=>sameStoryByTitle(e));
+  if(!picked.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="cw-title">我收集的生词（'+picked.length+'）：点右侧 × 可撤回</div>'+picked.map(e=>{
+    const idx=state.entries.indexOf(e);
+    const mean=e.meaning?((e.pos?e.pos+' ':'')+e.meaning):'';
+    return '<span class="cw-chip"><b>'+esc(e.word)+'</b>'+(mean?'<i>'+esc(mean)+'</i>':'')+'<button type="button" data-cw-remove="'+idx+'" aria-label="移除 '+esc(e.word)+'">×</button></span>';
+  }).join('');
+}
+document.addEventListener('click',event=>{
+  const b=event.target.closest&&event.target.closest('[data-cw-remove]');
+  if(!b)return;
+  event.preventDefault();event.stopPropagation();
+  const idx=Number(b.dataset.cwRemove);
+  if(!Number.isNaN(idx)){state.entries.splice(idx,1);save();draw();status('已撤回该词');}
+},true);
+function updateDoneButton(){
+  const btn=document.getElementById('markDone');
+  if(!btn)return;
+  const done=state.done&&state.done[current().title];
+  btn.textContent=done?'✓ 已学完':'本篇学完了';
+  btn.classList.toggle('done',!!done);
+}
+document.getElementById('markDone').onclick=()=>{
+  const s=current();
+  state.done=state.done||{};
+  if(state.done[s.title]){delete state.done[s.title];status('已取消"学完"标记');}
+  else{state.done[s.title]=new Date().toISOString();status('已标记学完：《'+s.title+'》，整理时会一并读取');}
+  save();updateDoneButton();
+};
+const drawBeforeDone=draw;
+draw=function(){drawBeforeDone.apply(this,arguments);renderCollected();updateDoneButton();};
 draw();initializeReadingClock();pullState();
 </script></body></html>
