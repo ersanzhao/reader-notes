@@ -117,7 +117,7 @@ async function showMeaning(word,anchor){
   if(!meaning||meaning.length>1000||!/[\u3400-\u9fff]/.test(meaning))throw new Error('no-translation');
   if(version!==lookupVersion)return;
   liveCache[cacheId]=meaning;try{localStorage.setItem(liveCacheKey,JSON.stringify(liveCache));}catch{}
-  const entry=state.entries.find(e=>e.story===storyId&&e.word.toLowerCase()===cacheId);
+  const entry=state.entries.find(e=>sameStoryByTitle(e)&&e.word.toLowerCase()===cacheId);
   if(entry&&!entry.meaning){entry.meaning=meaning;entry.meaningSource='online';save();drawNotes();}
   paint(meaning+'（在线释义）');finish();
  }catch(error){if(version===lookupVersion){paint('在线查词暂未成功，请再点一次重试');finish();}}
@@ -153,13 +153,14 @@ function initializeReadingClock(){
 }
 
 function current(){return stories[state.story];}
-function known(w){return state.entries.some(e=>e.story===current().id&&e.word.toLowerCase()===w.toLowerCase());}
+function sameStoryByTitle(e,s){const t=(s&&s.title)||current().title;return (e.title&&t)?e.title===t:(e.story===(s?s.id:current().id));}
+function known(w){return state.entries.some(e=>sameStoryByTitle(e)&&e.word.toLowerCase()===w.toLowerCase());}
 function wordHTML(text,context){let out='',last=0;for(const m of text.matchAll(tokenRE)){out+=esc(text.slice(last,m.index));const target=targets.includes(m[0].toLowerCase());out+='<button class="word '+(target?'target ':'')+(known(m[0])?'saved':'')+'" data-word="'+esc(m[0])+'" data-context="'+esc(context)+'" aria-label="收集 '+esc(m[0])+'">'+esc(m[0])+'</button>';last=m.index+m[0].length;}return out+esc(text.slice(last));}
 function draw(){syncReadingClock(true);hideMeaning();const s=current();$('story').value=String(state.story);$('title').textContent=s.title;$('subtitle').textContent=s.date+' · '+s.en+' · '+s.words.length+' 个目标词';$('prev').disabled=state.story===0;$('next').disabled=state.story===stories.length-1;
  $('passage').innerHTML=s.text.split('\n\n').map(p=>'<p>'+p.split(/(?<=[.!?])\s+/).map(t=>wordHTML(t,t)).join(' ')+'</p>').join('');$('summary').textContent=s.summary;
  $('gloss').innerHTML=s.words.map(w=>'<div class="term"><div><button class="word '+(known(w)?'saved':'')+'" data-word="'+esc(w)+'"><strong>'+esc(w)+'</strong></button><span class="pos">'+esc(s.pos[w])+'</span></div><div class="meaning">'+esc(s.gloss[w])+'</div></div>').join('');
  $('phrases').innerHTML=s.phrases.map(([p,m])=>'<div class="phrase"><button class="word" data-word="'+esc(p)+'"><b>'+esc(p)+'</b></button><span>'+esc(m)+'</span></div>').join('');$('storynote').value=state.notes[s.id]||'';drawNotes();drawPersonalNotes();}
-function storyEntries(s){return state.entries.map((entry,index)=>({entry,index})).filter(x=>x.entry.story===s.id).map(({entry,index})=>{const info=(s.personalVocabulary||[]).find(r=>r.selected.toLowerCase()===entry.word.toLowerCase()||r.base===entry.word.toLowerCase());return {entry:info?{...entry,pos:info.pos,meaning:info.meaning}:entry,index};}).sort((a,b)=>{
+function storyEntries(s){return state.entries.map((entry,index)=>({entry,index})).filter(x=>sameStoryByTitle(x.entry,s)).map(({entry,index})=>{const info=(s.personalVocabulary||[]).find(r=>r.selected.toLowerCase()===entry.word.toLowerCase()||r.base===entry.word.toLowerCase());return {entry:info?{...entry,pos:info.pos,meaning:info.meaning}:entry,index};}).sort((a,b)=>{
  const position=w=>{const n=s.text.toLowerCase().indexOf(w.toLowerCase());return n<0?Infinity:n};return position(a.entry.word)-position(b.entry.word);
  });}
 function drawPersonalNotes(){const s=current(),items=s.personalVocabulary||[];
@@ -189,7 +190,7 @@ document.querySelector('.reader').addEventListener('click',e=>{
 });
 document.querySelector('.reader').addEventListener('dblclick',e=>{
  const b=e.target.closest('[data-word]');if(!b)return;
- const word=b.dataset.word,index=state.entries.findIndex(item=>item.story===current().id&&item.word.toLowerCase()===word.toLowerCase());
+ const word=b.dataset.word,index=state.entries.findIndex(item=>sameStoryByTitle(item)&&item.word.toLowerCase()===word.toLowerCase());
  if(index<0)return;
  e.preventDefault();hideMeaning();state.entries.splice(index,1);save();drawNotes();
  document.querySelectorAll('[data-word]').forEach(item=>{if(item.dataset.word.toLowerCase()===word.toLowerCase())item.classList.remove('saved');});
