@@ -211,7 +211,7 @@ async function pullState(){
   if(!r.ok)return;
   const rows=await r.json(),remote=rows&&rows[0]&&rows[0].data;
   if(!remote||!Array.isArray(remote.entries))return;
-  if(remote.entries.length>state.entries.length){
+  if(remote.entries.length>=state.entries.length&&JSON.stringify(remote)!==JSON.stringify(state)){
    state=remote;try{localStorage.setItem(key,JSON.stringify(state));}catch(error){}
    draw();status('已同步云端记录（'+state.entries.length+' 项）');
   }else if(remote.entries.length<state.entries.length){
@@ -296,5 +296,19 @@ if(glossTabBtn)glossTabBtn.addEventListener('click',event=>{event.preventDefault
 let glossSaved=null;try{glossSaved=localStorage.getItem(glossBarKey);}catch(error){}
 setGlossBar(glossSaved==='1');
 anchorGlossBar();setInterval(anchorGlossBar,1500);window.addEventListener('resize',anchorGlossBar);
+/* migrate: stories were renumbered when previous days were added */
+(function(){
+ let changed=false;
+ for(const e of state.entries){
+  if(e.context&&e.context.indexOf('**')>=0){e.context=e.context.split('**').join('');changed=true;}
+  const s=stories.find(x=>x.title===e.title);
+  if(s&&e.story!==s.id){e.story=s.id;changed=true;}
+ }
+ for(const k of Object.keys(state.notes||{})){
+  const old=Number(k);
+  if(old>=1&&old<=5&&state.notes[old+19]===undefined){state.notes[old+19]=state.notes[old];delete state.notes[old];changed=true;}
+ }
+ if(changed){save();draw();status('已找回之前的生词标记（'+state.entries.length+' 项）');}
+})();
 draw();initializeReadingClock();pullState();
 </script></body></html>
