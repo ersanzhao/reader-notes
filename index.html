@@ -36,7 +36,7 @@ aside.note-panel{display:none}
   #glossBarBody{max-height:96px}
 }
 </style></head><body data-cols="2">
-<header class="top"><div class="brand">小故事 · 进阶阅读与笔记 <small>3 天 · 24 篇故事</small></div><div class="controls"><button id="prev" aria-label="上一篇">←</button><select id="story" aria-label="选择故事"></select><button id="next" aria-label="下一篇">→</button><select id="columns" style="display:none" aria-hidden="true"><option value="2">2组</option></select><span class="reading-clock" title="仅当前故事阅读页处于前台时累计，切换后自动保存"><time id="readingTime">00:00</time> <small id="readingClockState">计时中</small> <button id="readingPause" type="button">暂停</button></span></div><nav class="tabs"><button data-tab="read" class="active">阅读</button><button data-tab="gloss">词表与词组</button><button data-tab="notes" id="notesTab">笔记 · 0</button></nav></header>
+<header class="top"><div class="brand">小故事 · 进阶阅读与笔记 <small>3 天 · 24 篇故事</small></div><div class="controls"><button id="prev" aria-label="上一篇">←</button><select id="story" aria-label="选择故事"></select><button id="next" aria-label="下一篇">→</button><select id="columns" style="display:none" aria-hidden="true"><option value="2">2组</option></select><span class="reading-clock" title="仅当前故事阅读页处于前台时累计，切换后自动保存"><time id="readingTime">00:00</time> <small id="readingClockState">计时中</small> <button id="readingPause" type="button">暂停</button></span></div><nav class="tabs"><button data-tab="read" class="active">阅读</button><button data-tab="gloss">词表与词组</button></nav></header>
 <section class="gloss-bar" id="glossBar" aria-label="词表与词组">
 <div class="gloss-bar-head"><strong>词表与词组</strong><span class="gloss-bar-hint">栏内可滚动</span><button id="glossToggle" type="button">收起</button></div>
 <div id="glossBarBody"></div>
@@ -166,7 +166,7 @@ function drawPersonalNotes(){const s=current(),items=s.personalVocabulary||[];
  if(s.readingQuestion){const q=s.readingQuestion;$('personalNotes').innerHTML+='<details class="personal-word"><summary>你问的结尾句</summary><p>'+esc(q.sentence)+'</p><p>'+esc(q.translation)+'</p><p>'+esc(q.grammar)+'</p><p>'+esc(q.connection)+'</p></details>';}
 }
 
-function drawNotes(){const count=state.entries.length;$('notesTab').textContent='笔记 · '+count;$('basket').textContent='生词篮 '+count;
+function drawNotes(){const count=state.entries.length;(function(){const nt=$('notesTab');if(nt)nt.textContent='笔记 · '+count;})();$('basket').textContent='生词篮 '+count;
  $('entries').innerHTML=count?stories.map(s=>{const entries=storyEntries(s);if(!entries.length)return '';
  return '<section class="story-note-group"><h3>'+esc(s.title)+' · '+entries.length+'词</h3>'+entries.map(({entry:e,index:i})=>'<div class="entry"><button class="remove" data-remove="'+i+'" aria-label="移除 '+esc(e.word)+'">移除</button><strong>'+esc(e.word)+'</strong>'+(e.meaning?'<p class="hint">'+esc(e.pos||'')+' '+esc(e.meaning)+'</p>':'')+'<blockquote>'+esc(e.context||'')+'</blockquote><textarea aria-label="'+esc(e.word)+' 的备注" data-note="'+i+'" placeholder="不认识 / 这里为什么这样用？">'+esc(e.note||'')+'</textarea></div>').join('')+'</section>';
  }).join(''):'<p class="hint">还没有收集的词。回到阅读，直接点不认识的英文词。</p>';}
