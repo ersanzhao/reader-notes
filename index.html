@@ -51,14 +51,20 @@ let liveCache={};try{const cached=JSON.parse(localStorage.getItem(liveCacheKey))
 document.addEventListener('pointerdown',e=>{if(e.target.closest&&(e.target.closest('.word')||e.target.closest('#meaningToast')))return;hideMeaning();},true);
 function hideMeaning(){clearTimeout(meaningTimer);lookupVersion++;lookupController?.abort();lookupController=null;$('meaningToast').classList.add('hidden');}
 function positionMeaning(box,anchor){
- const w=box.offsetWidth||300,h=box.offsetHeight||70;
+ const w=box.offsetWidth||300,h=box.offsetHeight||60;
  let left=(window.innerWidth-w)/2,top=(window.innerHeight-h)/2;
+ let line=46;
+ try{
+  const p=document.querySelector('#passage p')||document.querySelector('#passage');
+  if(p){const lh=parseFloat(getComputedStyle(p).lineHeight);if(lh>0)line=lh;}
+ }catch(error){}
+ const gap=Math.max(line*5,120);
  if(anchor&&typeof anchor.getBoundingClientRect==='function'){
   const r=anchor.getBoundingClientRect();
   left=r.left+r.width/2-w/2;
-  top=r.bottom+10;
-  if(top+h>window.innerHeight-10)top=r.top-h-10;
-  if(top<10)top=Math.max(10,(window.innerHeight-h)/2);
+  top=r.bottom+gap;
+  if(top+h>window.innerHeight-10)top=r.top-h-gap;
+  if(top<10)top=Math.max(10,Math.min(window.innerHeight-h-10,r.bottom+gap));
   left=Math.max(10,Math.min(window.innerWidth-w-10,left));
  }
  box.style.transform='none';box.style.left=left+'px';box.style.top=top+'px';
@@ -66,7 +72,7 @@ function positionMeaning(box,anchor){
 async function showMeaning(word,anchor){
  hideMeaning();const version=lookupVersion,storyId=current().id,box=$('meaningToast'),cacheId=word.trim().toLowerCase();
  const paint=text=>{if(version!==lookupVersion)return;box.textContent=word+' · '+text;box.classList.remove('hidden');positionMeaning(box,anchor);};
- const finish=()=>{if(version===lookupVersion)meaningTimer=setTimeout(()=>box.classList.add('hidden'),12000);};
+ const finish=()=>{if(version===lookupVersion)meaningTimer=setTimeout(()=>box.classList.add('hidden'),2000);};
  const info=lookupMeaning(word);
  if(info){paint((info.pos?info.pos+' ':'')+info.meaning);finish();return;}
  const cached=Object.prototype.hasOwnProperty.call(liveCache,cacheId)?liveCache[cacheId]:null;
